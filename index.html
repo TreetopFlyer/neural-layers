@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+        <script src="http://treetopflyer.github.io/vcore/lib.js"></script>
+        <script>
+        var NL = {};
+        NL.Cell = function(inX, inY)
+        {
+            var obj = {};
+            obj.Pos = [inX, inY];
+            obj.Neighbors = [];
+            obj.Field = [];
+            obj.Charge = 0;
+            return obj;
+        };
+        NL.Grid = function(inWidth, inHeight)
+        {
+            var x, y, i;
+            var cell, neighbor;
+            var min, max;
+            var obj = {};
+
+            obj.Cell = [];
+            obj.Cells = [];
+            for(x=0; x<inWidth; x++)
+            {
+                obj.Cell[x] = [];
+                for(y=0; y<inHeight; y++)
+                {
+                    cell = NL.Cell(x, y);
+                    obj.Cell[x][y] = cell;
+                    obj.Cells.push(cell);
+                }
+            }
+
+            obj.Observe = function(inGrid, inMin, inMax, inRadius)
+            {
+                var i;
+                var cell;
+                var coordsHere, coordsThere;
+                var boundsHere, boundsThere;
+
+                boundsHere = [[0, 0], [obj.Cell.length, obj.Cell[0].length]];
+                boundsThere = [inMin, inMax];
+
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    cell = obj.Cells[i];
+                    coordsHere = M.GlobalToLocal([cell.Pos], boundsHere);
+                    coordsThere = M.LocalToGlobal(coordsHere, boundsThere)[0];
+                    coordsThere[0] = Math.floor(coordsThere[0]);
+                    coordsThere[1] = Math.floor(coordsThere[1]);
+                    /////////
+                    ///
+                    min = [coordsThere[0] - inRadius, coordsThere[1] - inRadius];
+                    max = [coordsThere[0] + inRadius, coordsThere[1] + inRadius];
+                    for(x=min[0]; x<max[0]; x++)
+                    {
+                        for(y=min[1]; y<max[1]; y++)
+                        {
+                            radius = V.Distance(coordsThere, [x, y]);
+                            if(radius <= inRadius)
+                            {
+                                neighbor = {};
+
+                                var wrap = [x % inGrid.Cell.length, y % inGrid.Cell[0].length];
+                                if(wrap[0] < 0)
+                                {
+                                    wrap[0] += inGrid.Cell.length;
+                                }
+                                if(wrap[1] < 0)
+                                {
+                                    wrap[1] += inGrid.Cell[0].length;
+                                }
+
+                                neighbor.Cell = inGrid.Cell[wrap[0]][wrap[1]];
+                                
+                                if(radius < inRadius*0.6)
+                                {
+                                    neighbor.Weight = 1;
+                                }
+                                else
+                                {
+                                    neighbor.Weight = -1;
+                                }
+                                cell.Field.push(neighbor);
+                            }
+                        }
+                    }
+
+
+                }
+            };
+
+            obj.Lateral = function(inRadius)
+            {
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    cell = obj.Cells[i];
+                    min = [cell.Pos[0] - inRadius, cell.Pos[1] - inRadius];
+                    max = [cell.Pos[0] + inRadius, cell.Pos[1] + inRadius];
+                    for(x=min[0]; x<max[0]; x++)
+                    {
+                        for(y=min[1]; y<max[1]; y++)
+                        {
+                            radius = V.Distance(cell.Pos, [x, y]);
+                            if(radius <= inRadius)
+                            {
+                                neighbor = {};
+
+                                var wrap = [x % inWidth, y % inHeight];
+                                if(wrap[0] < 0)
+                                {
+                                    wrap[0] += inWidth;
+                                }
+                                if(wrap[1] < 0)
+                                {
+                                    wrap[1] += inHeight;
+                                }
+
+                                neighbor.Cell = obj.Cell[wrap[0]][wrap[1]];
+                                
+                                if(radius < inRadius*0.6)
+                                {
+                                    neighbor.Weight = 1;
+                                }
+                                else
+                                {
+                                    neighbor.Weight = -1;
+                                }
+                                cell.Neighbors.push(neighbor);
+                            }
+                        }
+                    }
+                }
+            };
+
+            return obj;
+        };
+        </script>
+        <script>
+        var grid = NL.Grid(10, 20, 5);
+        </script>
+        <style>
+            *
+            {
+                position:relative;
+                margin:0;
+                padding:0;
+                border:0;
+                font-family:Arial;
+            }
+            .Cell
+            {
+                position:absolute;
+                float:left;
+                width:20px;
+                height:20px;
+                margin:10px;
+                border:1px solid #ddd;
+
+                font-size:9px;
+                text-align:center;
+            }
+        </style>
+    </head>
+    <body>
+        <div ng-app="App" ng-controller="Controller" ng-cloak>
+            <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" ng-click="Field(cell);" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
+                {{cell.Charge}}
+            </div>
+            <div style="position:relative; left:220px;">
+                <div class="Cell" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
+                    {{cell.Charge}}
+                </div>
+            </div>
+        </div>
+        <script>
+            var App;
+            App = angular.module("App", []);
+            App.controller("Controller", ["$scope", function($scope)
+            {
+                $scope.LGN = NL.Grid(10, 10);
+                $scope.Grid = NL.Grid(10, 20);
+                $scope.Grid.Lateral(5);
+                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
+                $scope.Fire = function(inCell)
+                {
+                    var i;
+                    for(i=0; i<inCell.Neighbors.length; i++)
+                    {
+                        inCell.Neighbors[i].Cell.Charge += inCell.Neighbors[i].Weight;
+                    }
+                };
+                $scope.Field = function(inCell)
+                {
+                    var i;
+                    for(i=0; i<inCell.Field.length; i++)
+                    {
+                        inCell.Field[i].Cell.Charge += inCell.Field[i].Weight;
+                    }
+                }
+            }]);
+        </script>
+    </body>
+</html>
