@@ -12,6 +12,7 @@
             obj.Neighbors = [];
             obj.Field = [];
             obj.Charge = 0;
+            obj.Conform = 0;
             return obj;
         };
         NL.Grid = function(inWidth, inHeight)
@@ -32,7 +33,59 @@
                     obj.Cell[x][y] = cell;
                     obj.Cells.push(cell);
                 }
-            }
+            };
+
+            obj.RadialSelect = function(inX, inY, inRadius, inWrap, inHandler)
+            {
+                var min, max;
+                var cell;
+                var coords;
+                var oob;
+                min = [inX - inRadius, inY - inRadius];
+                max = [inX + inRadius, inY + inRadius];
+                cell = obj.Cell[inX][inY];
+                for(x=min[0]; x<max[0]; x++)
+                {
+                    for(y=min[1]; y<max[1]; y++)
+                    {
+                        radius = V.Distance(cell.Pos, [x, y]);
+                        if(radius <= inRadius)
+                        {
+                            neighbor = {};
+                            coords = [x, y];
+                            oob = false;
+
+                            if(coords[0] > obj.Cell.length-1)
+                            {
+                                coords[0] -= obj.Cell.length;
+                                oob = true;
+                            }
+                            if(coords[1] > obj.Cell[0].length-1)
+                            {
+                                coords[1] -= obj.Cell[0].length;
+                                oob = true;
+                            }
+                            if(coords[0] < 0)
+                            {
+                                coords[0] += obj.Cell.length;
+                                oob = true;
+                            }
+                            if(coords[1] < 0)
+                            {
+                                coords[1] += obj.Cell[0].length;
+                                oob = true;
+                            }
+
+                            if(oob && !inWrap)
+                            {
+                                continue;
+                            }
+                            
+                            inHandler(obj.Cell[coords[0]][coords[1]], radius);
+                        }
+                    }
+                }
+            };
 
             obj.Observe = function(inGrid, inMin, inMax, inRadius)
             {
@@ -51,96 +104,72 @@
                     coordsThere = M.LocalToGlobal(coordsHere, boundsThere)[0];
                     coordsThere[0] = Math.floor(coordsThere[0]);
                     coordsThere[1] = Math.floor(coordsThere[1]);
-                    /////////
-                    ///
-                    min = [coordsThere[0] - inRadius, coordsThere[1] - inRadius];
-                    max = [coordsThere[0] + inRadius, coordsThere[1] + inRadius];
-                    for(x=min[0]; x<max[0]; x++)
+                    
+                    inGrid.RadialSelect(coordsThere[0], coordsThere[1], inRadius, true, function(inCell, inDistance)
                     {
-                        for(y=min[1]; y<max[1]; y++)
-                        {
-                            radius = V.Distance(coordsThere, [x, y]);
-                            if(radius <= inRadius)
-                            {
-                                neighbor = {};
-
-                                var wrap = [x % inGrid.Cell.length, y % inGrid.Cell[0].length];
-                                if(wrap[0] < 0)
-                                {
-                                    wrap[0] += inGrid.Cell.length;
-                                }
-                                if(wrap[1] < 0)
-                                {
-                                    wrap[1] += inGrid.Cell[0].length;
-                                }
-
-                                neighbor.Cell = inGrid.Cell[wrap[0]][wrap[1]];
-                                
-                                if(radius < inRadius*0.6)
-                                {
-                                    neighbor.Weight = 1;
-                                }
-                                else
-                                {
-                                    neighbor.Weight = -1;
-                                }
-                                cell.Field.push(neighbor);
-                            }
-                        }
-                    }
-
+                        cell.Field.push({
+                            Cell:inCell,
+                            Weight:Math.random()*0.1
+                        });
+                    });
 
                 }
             };
 
             obj.Lateral = function(inRadius)
             {
+                var cell;
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    min = [cell.Pos[0] - inRadius, cell.Pos[1] - inRadius];
-                    max = [cell.Pos[0] + inRadius, cell.Pos[1] + inRadius];
-                    for(x=min[0]; x<max[0]; x++)
+                    obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, false, function(inCell, inDistance)
                     {
-                        for(y=min[1]; y<max[1]; y++)
-                        {
-                            radius = V.Distance(cell.Pos, [x, y]);
-                            if(radius <= inRadius)
-                            {
-                                neighbor = {};
+                        cell.Neighbors.push({
+                            Cell:inCell,
+                            Weight:(inDistance > inRadius*0.3) ? -1 : 1
+                        });
+                    });
+                }
+            };
 
-                                var wrap = [x % inWidth, y % inHeight];
-                                if(wrap[0] < 0)
-                                {
-                                    wrap[0] += inWidth;
-                                }
-                                if(wrap[1] < 0)
-                                {
-                                    wrap[1] += inHeight;
-                                }
-
-                                neighbor.Cell = obj.Cell[wrap[0]][wrap[1]];
-                                
-                                if(radius < inRadius*0.6)
-                                {
-                                    neighbor.Weight = 1;
-                                }
-                                else
-                                {
-                                    neighbor.Weight = -1;
-                                }
-                                cell.Neighbors.push(neighbor);
-                            }
-                        }
+            obj.Evaluate = function()
+            {
+                var i, j;
+                var cell;
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    obj.Cells[i].Charge = 0;
+                    obj.Cells[i].Conform = 0;
+                }
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    cell = obj.Cells[i];
+                    for(j=0; j<cell.Field.length; j++)
+                    {
+                        cell.Charge += (cell.Field[j].Cell.Charge * cell.Field[j].Weight);
+                    }
+                    for(j=0; j<cell.Neighbors.length; j++)
+                    {
+                         cell.Neighbors[j].Cell.Conform += (cell.Charge * cell.Neighbors[j].Weight);
+                    }
+                }
+            };
+            obj.Conform = function(inAmount)
+            {
+                var i, j;
+                var cell;
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    cell = obj.Cells[i];
+                    for(j=0; j<cell.Field.length; j++)
+                    {
+                        cell.Field[j].Weight += inAmount*cell.Conform;
                     }
                 }
             };
 
             return obj;
         };
-        </script>
-        <script>
-        var grid = NL.Grid(10, 20, 5);
         </script>
         <style>
             *
@@ -163,16 +192,30 @@
                 font-size:9px;
                 text-align:center;
             }
+            .Cell .Fill
+            {
+                position:absolute;
+                top:0;
+                left:0;
+                width:100%;
+                height:100%;
+                background:#000;
+                opacity:0;
+            }
         </style>
     </head>
     <body>
         <div ng-app="App" ng-controller="Controller" ng-cloak>
-            <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" ng-click="Field(cell);" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
-                {{cell.Charge}}
-            </div>
-            <div style="position:relative; left:220px;">
-                <div class="Cell" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
-                    {{cell.Charge}}
+            <button ng-click="Grid.Evaluate();">Evaluate</button>
+            <button ng-click="Grid.Conform(0.01);">Conform</button>
+            <div style="position:relative; top:40px;">
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" ng-click="Fire(cell);Field(cell);" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
+                    <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}};"></div>
+                </div>
+                <div style="position:relative; left:220px;">
+                    <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
+                        <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -185,22 +228,26 @@
                 $scope.Grid = NL.Grid(10, 20);
                 $scope.Grid.Lateral(5);
                 $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
-                $scope.Fire = function(inCell)
+                $scope.Sigmoid = function(inAmount)
                 {
-                    var i;
-                    for(i=0; i<inCell.Neighbors.length; i++)
+                    return 1 / (1 + Math.pow(Math.E, -inAmount));
+                };
+                $scope.Toggle = function(inCell)
+                {
+                    switch(inCell.Charge)
                     {
-                        inCell.Neighbors[i].Cell.Charge += inCell.Neighbors[i].Weight;
+                        case 0 :
+                            inCell.Charge = 1;
+                            break;
+
+                        case 1 :
+                            inCell.Charge = -1;
+                            break;
+                        case -1 :
+                            inCell.Charge = 0;
+                            break;
                     }
                 };
-                $scope.Field = function(inCell)
-                {
-                    var i;
-                    for(i=0; i<inCell.Field.length; i++)
-                    {
-                        inCell.Field[i].Cell.Charge += inCell.Field[i].Weight;
-                    }
-                }
             }]);
         </script>
     </body>
