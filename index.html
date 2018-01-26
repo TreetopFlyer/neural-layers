@@ -44,9 +44,9 @@
                 min = [inX - inRadius, inY - inRadius];
                 max = [inX + inRadius, inY + inRadius];
                 cell = obj.Cell[inX][inY];
-                for(x=min[0]; x<max[0]; x++)
+                for(x=min[0]; x<=max[0]; x++)
                 {
-                    for(y=min[1]; y<max[1]; y++)
+                    for(y=min[1]; y<=max[1]; y++)
                     {
                         radius = V.Distance(cell.Pos, [x, y]);
                         if(radius <= inRadius)
@@ -225,8 +225,8 @@
             App.controller("Controller", ["$scope", function($scope)
             {
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(10, 20);
-                $scope.Grid.Lateral(5);
+                $scope.Grid = NL.Grid(20, 20);
+                $scope.Grid.Lateral(8);
                 $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
                 $scope.Sigmoid = function(inAmount)
                 {
