@@ -5,6 +5,10 @@
         <script src="http://treetopflyer.github.io/vcore/lib.js"></script>
         <script>
         var NL = {};
+        NL.Sigmoid = function(inAmount)
+        {
+            return 1 / (1 + Math.pow(Math.E, -inAmount));
+        };
         NL.Cell = function(inX, inY)
         {
             var obj = {};
@@ -13,6 +17,27 @@
             obj.Field = [];
             obj.Charge = 0;
             obj.Conform = 0;
+
+            obj.GetRF = function()
+            {
+                var i;
+                var out;
+                out = [];
+                for(i=0; i<obj.Field.length; i++)
+                {
+                    out[i] = obj.Field[i].Weight;
+                }
+            };
+
+            obj.SetRF = function(inVector)
+            {
+                var i;
+                for(i=0; i<inVector.length; i++)
+                {
+                    obj.Field[i].Weight = inVector[i];
+                }
+            };
+
             return obj;
         };
         NL.Grid = function(inWidth, inHeight)
@@ -138,32 +163,48 @@
                 var cell;
                 for(i=0; i<obj.Cells.length; i++)
                 {
-                    obj.Cells[i].Charge = 0;
-                    obj.Cells[i].Conform = 0;
+                    cell = obj.Cells[i];
+                    cell.Conform = 0;
                 }
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
+                    cell.Charge = 0;
                     for(j=0; j<cell.Field.length; j++)
                     {
                         cell.Charge += (cell.Field[j].Cell.Charge * cell.Field[j].Weight);
                     }
                     for(j=0; j<cell.Neighbors.length; j++)
                     {
-                         cell.Neighbors[j].Cell.Conform += (cell.Charge * cell.Neighbors[j].Weight);
+                        cell.Neighbors[j].Cell.Conform += cell.Charge*cell.Neighbors[j].Weight;
+                    }
+                }
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    cell = obj.Cells[i];
+                    if(cell.Conform < -1)
+                    {
+                        cell.Conform = -1;
+                    }
+                    if(cell.Conform > 1)
+                    {
+                        cell.Conform = 1;
                     }
                 }
             };
+
             obj.Conform = function(inAmount)
             {
                 var i, j;
                 var cell;
+                var diff;
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
                     for(j=0; j<cell.Field.length; j++)
                     {
-                        cell.Field[j].Weight += inAmount*cell.Conform;
+                        diff = (cell.Field[j].Cell.Charge - cell.Field[j].Weight)*inAmount*cell.Conform;
+                        cell.Field[j].Weight += diff;
                     }
                 }
             };
@@ -209,13 +250,18 @@
             <button ng-click="Grid.Evaluate();">Evaluate</button>
             <button ng-click="Grid.Conform(0.01);">Conform</button>
             <div style="position:relative; top:40px;">
-                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" ng-click="Fire(cell);Field(cell);" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
-                    <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}};"></div>
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
+                    <div class="Fill" style="opacity:{{cell.Charge}};"></div>
                 </div>
-                <div style="position:relative; left:220px;">
+                <div style="position:relative; left:420px;">
                     <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
                         <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
                     </div>
+                </div>
+            </div>
+            <div style="position:relative; top:460px;">
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
+                    <div class="Fill" style="{{Color(cell.Conform)}}"></div>
                 </div>
             </div>
         </div>
@@ -226,11 +272,19 @@
             {
                 $scope.LGN = NL.Grid(10, 10);
                 $scope.Grid = NL.Grid(20, 20);
-                $scope.Grid.Lateral(8);
+                $scope.Grid.Lateral(10);
                 $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
-                $scope.Sigmoid = function(inAmount)
+                $scope.Sigmoid = NL.Sigmoid;
+                $scope.Color = function(inFade)
                 {
-                    return 1 / (1 + Math.pow(Math.E, -inAmount));
+                    if(inFade < 0)
+                    {
+                        return "background:#00f; opacity:"+(-inFade);
+                    }
+                    else
+                    {
+                        return "background:#f00; opacity:"+(inFade);
+                    }
                 };
                 $scope.Toggle = function(inCell)
                 {
