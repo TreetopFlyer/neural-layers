@@ -248,7 +248,10 @@
     <body>
         <div ng-app="App" ng-controller="Controller" ng-cloak>
             <button ng-click="Grid.Evaluate();">Evaluate</button>
-            <button ng-click="Grid.Conform(0.01);">Conform</button>
+            <button ng-click="Grid.Conform(0.01); Grid.Evaluate();">Conform</button> | 
+            <button ng-click="Capture(LGN);">Capture</button>
+            <button ng-repeat="state in States track by $index" ng-click="Recall($index); Grid.Evaluate();">Recall</button>
+
             <div style="position:relative; top:40px;">
                 <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
                     <div class="Fill" style="opacity:{{cell.Charge}};"></div>
@@ -275,6 +278,12 @@
                 $scope.Grid.Lateral(10);
                 $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
                 $scope.Sigmoid = NL.Sigmoid;
+                $scope.States = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,-1,-1,0,0,0,1,1,1,1,1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,0,0,0,1,1,-1,-1,-1,-1,1,1,0,0,1,1,-1,-1,-1,-1,1,1,0,0,1,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,-1,-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,-1,-1,1,1,1,1,0,0,-1,-1,-1,1,1,1,1,0,0,0,-1,-1,-1,1,1,0,0,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ];
                 $scope.Color = function(inFade)
                 {
                     if(inFade < 0)
@@ -293,13 +302,34 @@
                         case 0 :
                             inCell.Charge = 1;
                             break;
-
                         case 1 :
                             inCell.Charge = -1;
                             break;
                         case -1 :
                             inCell.Charge = 0;
                             break;
+                    }
+                };
+                $scope.Capture = function(inLayer)
+                {
+                    var state = [];
+                    var i;
+                    for(i=0; i<inLayer.Cells.length; i++)
+                    {
+                        state.push(inLayer.Cells[i].Charge);
+                    }
+                    console.log(state.toString());
+                }
+                $scope.Recall = function(inIndex)
+                {
+                    var state;
+                    var i;
+                    
+                    state = $scope.States[inIndex];
+
+                    for(i=0; i<$scope.LGN.Cells.length; i++)
+                    {
+                        $scope.LGN.Cells[i].Charge = state[i];
                     }
                 };
             }]);
