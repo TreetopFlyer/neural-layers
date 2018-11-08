@@ -169,11 +169,13 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
+                    
                     cell.Charge = 0;
                     for(j=0; j<cell.Field.length; j++)
                     {
                         cell.Charge += (cell.Field[j].Cell.Charge * cell.Field[j].Weight);
                     }
+                    cell.Charge = NL.Sigmoid(cell.Charge)*2 - 1;
                     for(j=0; j<cell.Neighbors.length; j++)
                     {
                         cell.Neighbors[j].Cell.Conform += cell.Charge*cell.Neighbors[j].Weight;
@@ -182,7 +184,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    cell.Conform = NL.Sigmoid(cell.Conform);
+                    cell.Conform = NL.Sigmoid(cell.Conform)*2 - 1;
                 }
             };
 
@@ -242,8 +244,10 @@
         <div ng-app="App" ng-controller="Controller" ng-cloak>
             <button ng-click="Grid.Evaluate();">Evaluate</button>
             <button ng-click="Grid.Conform(0.01); Grid.Evaluate();">Conform</button> | 
+            <button ng-repeat="state in States track by $index" ng-click="Recall($index); Grid.Evaluate();">Recall</button> 
+            |
             <button ng-click="Capture(LGN);">Capture</button>
-            <button ng-repeat="state in States track by $index" ng-click="Recall($index); Grid.Evaluate();">Recall</button>
+            
 
             <div style="position:relative; top:40px;">
                 <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
@@ -275,7 +279,8 @@
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,-1,-1,0,0,0,1,1,1,1,1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,0,0,0,1,1,-1,-1,-1,-1,1,1,0,0,1,1,-1,-1,-1,-1,1,1,0,0,1,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                    [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,-1,-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,-1,-1,1,1,1,1,0,0,-1,-1,-1,1,1,1,1,0,0,0,-1,-1,-1,1,1,0,0,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,-1,-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,-1,-1,1,1,1,1,0,0,-1,-1,-1,1,1,1,1,0,0,0,-1,-1,-1,1,1,0,0,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
                 ];
                 $scope.Color = function(inFade)
                 {
