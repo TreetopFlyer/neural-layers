@@ -151,7 +151,7 @@
                     {
                         cell.Neighbors.push({
                             Cell:inCell,
-                            Weight:(inDistance > inRadius*0.2) ? -1 : 1
+                            Weight:(inDistance > inRadius*0.3) ? -1 : 1
                         });
                     });
                 }
@@ -186,7 +186,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    cell.Conform = NL.Sigmoid(cell.Conform)*2 - 1;
+                    cell.Conform = NL.Sigmoid(cell.Conform)
                 }
             };
 
@@ -221,14 +221,7 @@
             .Cell
             {
                 position:absolute;
-                float:left;
-                width:10px;
-                height:10px;
-                margin:5px;
-                border:1px solid #ddd;
-
-                font-size:9px;
-                text-align:center;
+                /*border:1px solid #ddd;*/
             }
             .Cell .Fill
             {
@@ -271,7 +264,6 @@
                 </div>
             </div>
 
-            <!-- layer1 weights -->
             <div style="position:relative;">
                 <div ng-repeat="cell in Grid.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
                     <div class="Cell" ng-repeat="connection in cell.Field track by $index" style="{{CSSPosition(connection.Cell)}}">
@@ -288,9 +280,9 @@
             {
                 $scope.Size = 10;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(15, 15);
-                $scope.Grid.Lateral(10);
-                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 3);
+                $scope.Grid = NL.Grid(20, 20);
+                $scope.Grid.Lateral(8);
+                $scope.Grid.Observe($scope.LGN, [4, 4], [5, 5], 5);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.States = [
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
