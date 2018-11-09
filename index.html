@@ -151,7 +151,7 @@
                     {
                         cell.Neighbors.push({
                             Cell:inCell,
-                            Weight:(inDistance > inRadius*0.3) ? -1 : 1
+                            Weight:(inDistance > inRadius*0.2) ? -1 : 1
                         });
                     });
                 }
@@ -250,22 +250,36 @@
             |
             <button ng-click="Capture(LGN);">Capture</button>
             
-
-            <div style="position:relative; top:40px;">
-                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*Size}}px; top:{{cell.Pos[1]*Size}}px;">
-                    <div class="Fill" style="{{Color(cell.Charge)}}"></div>
+            <!-- LGN/input image -->
+            <div style="position:relative; left:420px; top:40px;">
+                <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
                 </div>
-                <div style="position:relative; left:420px;">
-                    <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*Size}}px; top:{{cell.Pos[1]*Size}}px;">
-                        <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
+            </div>
+
+            <!-- layer1 field activations -->
+            <div style="position:relative; top:40px;">
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
+                </div>
+            </div>
+
+            <!-- layer1 lateral activations-->
+            <div style="position:relative; top:460px;">
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Fill" style="{{CSSColor(cell.Conform)}}"></div>
+                </div>
+            </div>
+
+            <!-- layer1 weights -->
+            <div style="position:relative;">
+                <div ng-repeat="cell in Grid.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
+                    <div class="Cell" ng-repeat="connection in cell.Field track by $index" style="{{CSSPosition(connection.Cell)}}">
+                        <div class="Fill" style="{{CSSColor(connection.Weight)}}"></div>
                     </div>
                 </div>
             </div>
-            <div style="position:relative; top:460px;">
-                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*Size}}px; top:{{cell.Pos[1]*Size}}px;">
-                    <div class="Fill" style="{{Color(cell.Conform)}}"></div>
-                </div>
-            </div>
+
         </div>
         <script>
             var App;
@@ -274,9 +288,9 @@
             {
                 $scope.Size = 10;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(20, 20);
+                $scope.Grid = NL.Grid(15, 15);
                 $scope.Grid.Lateral(10);
-                $scope.Grid.Observe($scope.LGN, [2, 2], [8, 8], 4);
+                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 3);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.States = [
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -285,7 +299,11 @@
                     [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,-1,-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,-1,-1,1,1,1,1,0,0,-1,-1,-1,1,1,1,1,0,0,0,-1,-1,-1,1,1,0,0,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
                 ];
-                $scope.Color = function(inFade)
+                $scope.CSSPosition = function(inCell)
+                {
+                    return "left:"+inCell.Pos[0]*$scope.Size+"px; top:"+inCell.Pos[1]*$scope.Size+"px; width:"+$scope.Size+"px; height:"+$scope.Size+"px;";
+                };
+                $scope.CSSColor = function(inFade)
                 {
                     if(inFade < 0)
                     {
