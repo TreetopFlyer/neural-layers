@@ -253,7 +253,7 @@
 
             <div style="position:relative; top:40px;">
                 <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="left:{{cell.Pos[0]*Size}}px; top:{{cell.Pos[1]*Size}}px;">
-                    <div class="Fill" style="opacity:{{cell.Charge}};"></div>
+                    <div class="Fill" style="{{Color(cell.Charge)}}"></div>
                 </div>
                 <div style="position:relative; left:420px;">
                     <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*Size}}px; top:{{cell.Pos[1]*Size}}px;">
@@ -274,9 +274,9 @@
             {
                 $scope.Size = 10;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(30, 30);
+                $scope.Grid = NL.Grid(20, 20);
                 $scope.Grid.Lateral(10);
-                $scope.Grid.Observe($scope.LGN, [1, 1], [8, 8], 3);
+                $scope.Grid.Observe($scope.LGN, [2, 2], [8, 8], 4);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.States = [
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -319,6 +319,7 @@
                     {
                         state.push(inLayer.Cells[i].Charge);
                     }
+                    States.push(state);
                     console.log(state.toString());
                 }
                 $scope.Recall = function(inIndex)
