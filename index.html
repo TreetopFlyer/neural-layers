@@ -134,7 +134,7 @@
                     {
                         cell.Field.push({
                             Cell:inCell,
-                            Weight:Math.random()*0.1
+                            Weight:Math.random()*0.5 - 0.25
                         });
                     });
 
@@ -144,14 +144,17 @@
             obj.Lateral = function(inRadius)
             {
                 var cell;
+                var rel;
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
                     obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, false, function(inCell, inDistance)
                     {
+                        rel = 1 - (inDistance/inRadius);
+                        rel = rel*2 - 1;
                         cell.Neighbors.push({
                             Cell:inCell,
-                            Weight:(inDistance > inRadius*0.3) ? -1 : 1
+                            Weight:rel
                         });
                     });
                 }
@@ -161,17 +164,14 @@
             {
                 var i, j;
                 var cell;
-                /*
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
                     cell.Conform = 0;
                 }
-                */
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    
                     cell.Charge = 0;
                     for(j=0; j<cell.Field.length; j++)
                     {
@@ -186,7 +186,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    cell.Conform = NL.Sigmoid(cell.Conform)
+                    cell.Conform = NL.Sigmoid(cell.Conform)-0.5;
                 }
             };
 
@@ -195,12 +195,14 @@
                 var i, j;
                 var cell;
                 var diff;
+                var sample;
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
                     for(j=0; j<cell.Field.length; j++)
                     {
-                        diff = (cell.Field[j].Cell.Charge - cell.Field[j].Weight)*inAmount*cell.Conform;
+                        sample = cell.Field[j].Cell.Charge;
+                        diff = (sample - cell.Field[j].Weight)*inAmount*cell.Conform;
                         cell.Field[j].Weight += diff;
                     }
                 }
@@ -238,7 +240,9 @@
     <body>
         <div ng-app="App" ng-controller="Controller" ng-cloak>
             <button ng-click="Grid.Evaluate();">Evaluate</button>
-            <button ng-click="Grid.Conform(0.01); Grid.Evaluate();">Conform</button> | 
+            <button ng-click="Grid.Conform(0.01); Grid.Evaluate();">Conform</button> 
+            <button ng-click="ShowWeights = !ShowWeights">ShowWeights</button>
+            | 
             <button ng-repeat="state in States track by $index" ng-click="Recall($index); Grid.Evaluate();">Recall</button> 
             |
             <button ng-click="Capture(LGN);">Capture</button>
@@ -264,7 +268,7 @@
                 </div>
             </div>
 
-            <div style="position:relative;">
+            <div style="position:relative;" ng-if="ShowWeights">
                 <div ng-repeat="cell in Grid.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
                     <div class="Cell" ng-repeat="connection in cell.Field track by $index" style="{{CSSPosition(connection.Cell)}}">
                         <div class="Fill" style="{{CSSColor(connection.Weight)}}"></div>
@@ -278,12 +282,13 @@
             App = angular.module("App", []);
             App.controller("Controller", ["$scope", function($scope)
             {
-                $scope.Size = 10;
+                $scope.Size = 8;
                 $scope.LGN = NL.Grid(10, 10);
                 $scope.Grid = NL.Grid(20, 20);
                 $scope.Grid.Lateral(8);
-                $scope.Grid.Observe($scope.LGN, [4, 4], [5, 5], 5);
+                $scope.Grid.Observe($scope.LGN, [4, 4], [6, 6], 5);
                 $scope.Sigmoid = NL.Sigmoid;
+                $scope.ShowWeights = false;
                 $scope.States = [
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,-1,-1,0,0,0,1,1,1,1,1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
