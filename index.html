@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
-        <script src="http://treetopflyer.github.io/vcore/lib.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+        <script src="//treetopflyer.github.io/vcore/lib.js"></script>
         <script>
         var NL = {};
+        NL.Sigmoid = function(inAmount)
+        {
+            return 1 / (1 + Math.pow(2, -inAmount));
+        };
         NL.Cell = function(inX, inY)
         {
             var obj = {};
@@ -13,6 +17,27 @@
             obj.Field = [];
             obj.Charge = 0;
             obj.Conform = 0;
+
+            obj.GetRF = function()
+            {
+                var i;
+                var out;
+                out = [];
+                for(i=0; i<obj.Field.length; i++)
+                {
+                    out[i] = obj.Field[i].Weight;
+                }
+            };
+
+            obj.SetRF = function(inVector)
+            {
+                var i;
+                for(i=0; i<inVector.length; i++)
+                {
+                    obj.Field[i].Weight = inVector[i];
+                }
+            };
+
             return obj;
         };
         NL.Grid = function(inWidth, inHeight)
@@ -44,9 +69,9 @@
                 min = [inX - inRadius, inY - inRadius];
                 max = [inX + inRadius, inY + inRadius];
                 cell = obj.Cell[inX][inY];
-                for(x=min[0]; x<max[0]; x++)
+                for(x=min[0]; x<=max[0]; x++)
                 {
-                    for(y=min[1]; y<max[1]; y++)
+                    for(y=min[1]; y<=max[1]; y++)
                     {
                         radius = V.Distance(cell.Pos, [x, y]);
                         if(radius <= inRadius)
@@ -107,9 +132,19 @@
                     
                     inGrid.RadialSelect(coordsThere[0], coordsThere[1], inRadius, true, function(inCell, inDistance)
                     {
+                        if(inDistance == 0)
+                        {
+                            rel = 0;
+                        }
+                        else
+                        {
+                            rel = (inDistance/inRadius);
+                        }
+                        mapping = Math.abs((rel*3)-2)-1;
+                        mapping = Math.random()*0.2 - 0.1;
                         cell.Field.push({
                             Cell:inCell,
-                            Weight:Math.random()*0.1
+                            Weight:mapping
                         });
                     });
 
@@ -119,14 +154,25 @@
             obj.Lateral = function(inRadius)
             {
                 var cell;
+                var rel;
+                var mapping;
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
                     obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, false, function(inCell, inDistance)
                     {
+                        if(inDistance == 0)
+                        {
+                            rel = 0;
+                        }
+                        else
+                        {
+                            rel = (inDistance/inRadius);
+                        }
+                        mapping = Math.abs((rel*3)-2)-1;
                         cell.Neighbors.push({
                             Cell:inCell,
-                            Weight:(inDistance > inRadius*0.3) ? -1 : 1
+                            Weight:mapping
                         });
                     });
                 }
@@ -138,32 +184,48 @@
                 var cell;
                 for(i=0; i<obj.Cells.length; i++)
                 {
-                    obj.Cells[i].Charge = 0;
-                    obj.Cells[i].Conform = 0;
+                    cell = obj.Cells[i];
+                    cell.Conform = 0;
                 }
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
+                    cell.Charge = 0;
                     for(j=0; j<cell.Field.length; j++)
                     {
                         cell.Charge += (cell.Field[j].Cell.Charge * cell.Field[j].Weight);
                     }
+                    cell.Charge = NL.Sigmoid(cell.Charge)*2 - 1;
                     for(j=0; j<cell.Neighbors.length; j++)
                     {
-                         cell.Neighbors[j].Cell.Conform += (cell.Charge * cell.Neighbors[j].Weight);
+                        cell.Neighbors[j].Cell.Conform += cell.Charge*cell.Neighbors[j].Weight;
                     }
                 }
+                for(i=0; i<obj.Cells.length; i++)
+                {
+                    cell = obj.Cells[i];
+                    cell.Conform = NL.Sigmoid(cell.Conform)-0.5;
+                }
             };
+
             obj.Conform = function(inAmount)
             {
                 var i, j;
                 var cell;
+                var diff;
+                var sample;
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
+                    if(Math.random() < 0.4)
+                    {
+                        continue;
+                    }
                     for(j=0; j<cell.Field.length; j++)
                     {
-                        cell.Field[j].Weight += inAmount*cell.Conform;
+                        sample = cell.Field[j].Cell.Charge;
+                        diff = (sample - cell.Field[j].Weight)*inAmount*cell.Conform;
+                        cell.Field[j].Weight += diff;
                     }
                 }
             };
@@ -183,14 +245,7 @@
             .Cell
             {
                 position:absolute;
-                float:left;
-                width:20px;
-                height:20px;
-                margin:10px;
-                border:1px solid #ddd;
-
-                font-size:9px;
-                text-align:center;
+                /*border:1px solid #ddd;*/
             }
             .Cell .Fill
             {
@@ -205,32 +260,79 @@
         </style>
     </head>
     <body>
-        <div ng-app="App" ng-controller="Controller" ng-cloak>
+        <div ng-app="App" ng-controller="Controller" ng-cloak ng-keypress="HandlerKeys($event)">
             <button ng-click="Grid.Evaluate();">Evaluate</button>
-            <button ng-click="Grid.Conform(0.01);">Conform</button>
-            <div style="position:relative; top:40px;">
-                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" ng-click="Fire(cell);Field(cell);" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
-                    <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}};"></div>
+            <button ng-click="Grid.Conform(0.01); Grid.Evaluate();">Conform</button> 
+            <button ng-click="ShowWeights = !ShowWeights">ShowWeights</button>
+            | 
+            <button ng-repeat="state in States track by $index" ng-click="Recall($index); Grid.Evaluate();">Recall</button> 
+            |
+            <button ng-click="Capture(LGN);">Capture</button>
+            
+            <!-- LGN/input image -->
+            <div style="position:relative; left:420px; top:40px;">
+                <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
                 </div>
-                <div style="position:relative; left:220px;">
-                    <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="left:{{cell.Pos[0]*20}}px; top:{{cell.Pos[1]*20}}px;">
-                        <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
+            </div>
+
+            <!-- layer1 field activations -->
+            <div style="position:relative; top:40px;">
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
+                </div>
+            </div>
+
+            <!-- layer1 lateral activations-->
+            <div style="position:relative; top:460px;">
+                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Fill" style="{{CSSColor(cell.Conform)}}"></div>
+                </div>
+            </div>
+
+            <div style="position:relative;" ng-if="ShowWeights">
+                <div ng-repeat="cell in Grid.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
+                    <div class="Cell" ng-repeat="connection in cell.Field track by $index" style="{{CSSPosition(connection.Cell)}}">
+                        <div class="Fill" style="{{CSSColor(connection.Weight)}}"></div>
                     </div>
                 </div>
             </div>
+
         </div>
         <script>
             var App;
             App = angular.module("App", []);
             App.controller("Controller", ["$scope", function($scope)
             {
+                $scope.Size = 8;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(10, 20);
-                $scope.Grid.Lateral(5);
+                $scope.Grid = NL.Grid(20, 20);
+                $scope.Grid.Lateral(8);
                 $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
-                $scope.Sigmoid = function(inAmount)
+                $scope.Sigmoid = NL.Sigmoid;
+                $scope.ShowWeights = false;
+                $scope.States = [
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,-1,-1,0,0,0,1,1,1,1,1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,0,0,0,1,1,-1,-1,-1,-1,1,1,0,0,1,1,-1,-1,-1,-1,1,1,0,0,1,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,0,-1,-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,-1,-1,1,1,1,1,0,0,-1,-1,-1,1,1,1,1,0,0,0,-1,-1,-1,1,1,0,0,0,0,0,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,-1,-1,1,1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,-1,-1,-1,1,1,1,1,0,0,0,-1,-1,-1,1,1,1,1,0,0,0,0,-1,-1,1,1,1,1,0,0,-1,-1,-1,-1,-1,1,1,1,0,0,0,0,0,0,-1,-1,1,1,0,0,0,0,0,0,0,-1,-1,1,0,0,0,0,0,0,0,0,-1,1,0,0,0,0,0,0,0,0,-1,1,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,-1]
+                ];
+                $scope.CSSPosition = function(inCell)
                 {
-                    return 1 / (1 + Math.pow(Math.E, -inAmount));
+                    return "left:"+inCell.Pos[0]*$scope.Size+"px; top:"+inCell.Pos[1]*$scope.Size+"px; width:"+$scope.Size+"px; height:"+$scope.Size+"px;";
+                };
+                $scope.CSSColor = function(inFade)
+                {
+                    if(inFade < 0)
+                    {
+                        return "background:#00f; opacity:"+(-inFade);
+                    }
+                    else
+                    {
+                        return "background:#f00; opacity:"+(inFade);
+                    }
                 };
                 $scope.Toggle = function(inCell)
                 {
@@ -239,13 +341,46 @@
                         case 0 :
                             inCell.Charge = 1;
                             break;
-
                         case 1 :
                             inCell.Charge = -1;
                             break;
                         case -1 :
                             inCell.Charge = 0;
                             break;
+                    }
+                };
+                $scope.Capture = function(inLayer)
+                {
+                    var state = [];
+                    var i;
+                    for(i=0; i<inLayer.Cells.length; i++)
+                    {
+                        state.push(inLayer.Cells[i].Charge);
+                    }
+                    $scope.States.push(state);
+                    console.log(state.toString());
+                }
+                $scope.Recall = function(inIndex)
+                {
+                    var state;
+                    var i;
+                    
+                    state = $scope.States[inIndex];
+
+                    for(i=0; i<$scope.LGN.Cells.length; i++)
+                    {
+                        $scope.LGN.Cells[i].Charge = state[i];
+                    }
+                };
+                $scope.HandlerKeys = function(inEvent)
+                {
+                    var index;
+                    index = inEvent.charCode - 49;
+                    if(index > -1 && index < $scope.States.length)
+                    {
+                        $scope.Recall(index);
+                        $scope.Grid.Conform(0.01);
+                        $scope.Grid.Evaluate();
                     }
                 };
             }]);
