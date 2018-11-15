@@ -7,7 +7,7 @@
         var NL = {};
         NL.Sigmoid = function(inAmount)
         {
-            return 1 / (1 + Math.pow(1.5, -inAmount));
+            return 1 / (1 + Math.pow(2, -inAmount));
         };
         NL.Cell = function(inX, inY)
         {
@@ -132,9 +132,19 @@
                     
                     inGrid.RadialSelect(coordsThere[0], coordsThere[1], inRadius, true, function(inCell, inDistance)
                     {
+                        if(inDistance == 0)
+                        {
+                            rel = 0;
+                        }
+                        else
+                        {
+                            rel = (inDistance/inRadius);
+                        }
+                        mapping = Math.abs((rel*3)-2)-1;
+                        mapping = Math.random()*0.2 - 0.1;
                         cell.Field.push({
                             Cell:inCell,
-                            Weight:Math.random()*0.5 - 0.25
+                            Weight:mapping
                         });
                     });
 
@@ -146,16 +156,20 @@
                 var cell;
                 var rel;
                 var mapping;
-                mapping = [1, 0 -1, 0]
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
                     obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, false, function(inCell, inDistance)
                     {
-
-                        rel = 1 - (inDistance/inRadius);
+                        if(inDistance == 0)
+                        {
+                            rel = 0;
+                        }
+                        else
+                        {
+                            rel = (inDistance/inRadius);
+                        }
                         mapping = Math.abs((rel*3)-2)-1;
-
                         cell.Neighbors.push({
                             Cell:inCell,
                             Weight:mapping
@@ -190,7 +204,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    cell.Conform = NL.Sigmoid(cell.Conform)*2 - 1;
+                    cell.Conform = NL.Sigmoid(cell.Conform)-0.5;
                 }
             };
 
@@ -203,6 +217,10 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
+                    if(Math.random() < 0.4)
+                    {
+                        continue;
+                    }
                     for(j=0; j<cell.Field.length; j++)
                     {
                         sample = cell.Field[j].Cell.Charge;
@@ -290,7 +308,7 @@
                 $scope.LGN = NL.Grid(10, 10);
                 $scope.Grid = NL.Grid(20, 20);
                 $scope.Grid.Lateral(8);
-                $scope.Grid.Observe($scope.LGN, [4, 4], [6, 6], 6);
+                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.ShowWeights = false;
                 $scope.States = [
