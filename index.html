@@ -23,6 +23,13 @@
 
             return array;
         }
+        function wrap(inSample, inMin, inMax)
+        {
+            range = inMax - inMin
+            loop = (inSample - inMin) % range;
+            if(loop < 0){ loop += range; }
+            return loop;
+        }
         var NL = {};
         NL.Sigmoid = function(inAmount)
         {
@@ -87,12 +94,12 @@
                 var oob;
                 min = [inX - inRadius, inY - inRadius];
                 max = [inX + inRadius, inY + inRadius];
-                cell = obj.Cell[inX][inY];
+                center = [inX, inY];
                 for(x=min[0]; x<=max[0]; x++)
                 {
                     for(y=min[1]; y<=max[1]; y++)
                     {
-                        radius = V.Distance(cell.Pos, [x, y]);
+                        radius = V.Distance(center, [x, y]);
                         if(radius <= inRadius)
                         {
                             neighbor = {};
@@ -149,7 +156,7 @@
                     coordsThere[0] = Math.floor(coordsThere[0]);
                     coordsThere[1] = Math.floor(coordsThere[1]);
                     
-                    inGrid.RadialSelect(coordsThere[0], coordsThere[1], inRadius, true, function(inCell, inDistance)
+                    inGrid.RadialSelect(coordsThere[0], coordsThere[1], inRadius, false, function(inCell, inDistance)
                     {
                         if(inDistance == 0)
                         {
@@ -178,7 +185,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, true, function(inCell, inDistance)
+                    obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, false, function(inCell, inDistance)
                     {
                         if(inDistance == 0)
                         {
@@ -274,7 +281,10 @@
                 var diff;
                 for(j=0; j<inCell.Field.length; j++)
                 {
-
+                    if(Math.random() < 0.3)
+                    {
+                        continue;
+                    }
                     sample = inCell.Field[j];
                     diff = (sample.Cell.Charge - sample.Weight)*inAmount;
                     sample.Weight += diff;
@@ -358,9 +368,9 @@
 
                 $scope.Size = 8;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(25, 25);
-                $scope.Grid.Lateral(5);
-                $scope.Grid.Observe($scope.LGN, [0, 0], [9, 9], 8);
+                $scope.Grid = NL.Grid(30, 30);
+                $scope.Grid.Lateral(10);
+                $scope.Grid.Observe($scope.LGN, [-3, -3], [13, 13], 6);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.ShowWeights = false;
                 $scope.States = [
