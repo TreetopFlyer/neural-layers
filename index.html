@@ -325,16 +325,16 @@
         <div ng-app="App" ng-controller="Controller" ng-cloak ng-keypress="HandlerKeys($event)">
             <button ng-click="ShowWeights = !ShowWeights">ShowWeights</button>
 
-            <!-- layer1 weights -->
+            <!-- active layer weights -->
             <div style="position:relative;" ng-if="ShowWeights">
-                <div ng-repeat="cell in ActiveLayer.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
+                <div ng-repeat="cell in Layers[ActiveLayer].Cells track by $index" style="position:relative; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
                     <div class="Cell" ng-repeat="connection in cell.Field track by $index" style="{{CSSPosition(connection.Cell)}}">
                         <div class="Fill" style="{{CSSColor(connection.Weight)}}"></div>
                     </div>
                 </div>
             </div>
 
-            <!---->
+            <!-- lgn/input -->
             <div class="Layer">
                 <div class="Controls">
                     <button ng-repeat="state in States track by $index" ng-click="Recall($index);">Recall</button> 
@@ -347,6 +347,7 @@
                     </div>
                 </div>
             </div>
+            <!-- layers -->
             <div ng-repeat="layer in Layers track by $index" class="Layer">
                 <div class="Controls" ng-if="ActiveLayer == $index">
                     <button ng-click="layer.Evaluate()">Evaluate</button>
@@ -360,6 +361,11 @@
                         <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
                     </div>
                 </div>
+                <div class="Competition" style="{{CSSSize(layer)}}">
+                    <div class="Cell" ng-repeat="cell in layer.Cells track by $index" style="{{CSSPosition(cell)}}">
+                        <div class="Fill" style="{{CSSColor(cell.Conform)}}"></div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -370,21 +376,22 @@
             {
                 
                 $scope.Size = 8;
-                $scope.LGN = NL.Grid(10, 10);
                 $scope.Layers = [];
-                $scope.ActiveLayer = false;
+                $scope.ActiveLayer = 0;
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.ShowWeights = false;
                 
+                $scope.LGN = NL.Grid(10, 10);
+
                 var layer1, layer2;
                 layer1 = NL.Grid(30, 30);
-                layer1.Lateral(10);
+                layer1.Lateral(6);
                 layer1.Observe($scope.LGN, [-3, -3], [13, 13], 6);
                 $scope.Layers.push(layer1);
                 
                 layer2 = NL.Grid(10, 10);
                 layer2.Lateral(5);
-                layer2.Observe(layer1, [-2, -2], [32, 32], 6);
+                layer2.Observe(layer1, [-2, -2], [32, 32], 10);
                 $scope.Layers.push(layer2);
 
                 $scope.States = [
