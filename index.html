@@ -202,6 +202,7 @@
                         });
                     });
                 }
+                return obj;
             };
 
             obj.Evaluate = function()
@@ -322,39 +323,41 @@
     </head>
     <body>
         <div ng-app="App" ng-controller="Controller" ng-cloak ng-keypress="HandlerKeys($event)">
-            <button ng-click="Grid.Evaluate();">Evaluate</button>
-            <button ng-click="Grid.Conform(0.01); Grid.Evaluate();">Conform</button> 
             <button ng-click="ShowWeights = !ShowWeights">ShowWeights</button>
-            | 
-            <button ng-repeat="state in States track by $index" ng-click="Recall($index); Grid.Evaluate();">Recall</button> 
-            |
-            <button ng-click="Capture(LGN);">Capture</button>
-            
-            <!-- LGN/input image -->
-            <div style="position:relative; left:420px; top:40px;">
-                <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
-                    <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
-                </div>
-            </div>
 
-            <!-- layer1 field activations -->
-            <div style="position:relative; top:40px;">
-                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="{{CSSPosition(cell)}}">
-                    <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
-                </div>
-            </div>
-
-            <!-- layer1 lateral activations-->
-            <div style="position:relative; top:460px;">
-                <div class="Cell" ng-repeat="cell in Grid.Cells track by $index" style="{{CSSPosition(cell)}}">
-                    <div class="Fill" style="{{CSSColor(cell.Conform)}}"></div>
-                </div>
-            </div>
-
+            <!-- layer1 weights -->
             <div style="position:relative;" ng-if="ShowWeights">
-                <div ng-repeat="cell in Grid.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
+                <div ng-repeat="cell in ActiveLayer.Cells track by $index" style="position:realtive; left:{{cell.Pos[0]*100}}px; top:{{cell.Pos[1]*100}}px;">
                     <div class="Cell" ng-repeat="connection in cell.Field track by $index" style="{{CSSPosition(connection.Cell)}}">
                         <div class="Fill" style="{{CSSColor(connection.Weight)}}"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!---->
+            <div class="Layer">
+                <div class="Controls">
+                    <button ng-repeat="state in States track by $index" ng-click="Recall($index);">Recall</button> 
+                    |
+                    <button ng-click="Capture(LGN);">Capture</button>
+                </div>
+                <div class="Activations" style="{{CSSSize(LGN)}}">
+                    <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
+                        <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
+                    </div>
+                </div>
+            </div>
+            <div ng-repeat="layer in Layers track by $index" class="Layer">
+                <div class="Controls" ng-if="ActiveLayer == $index">
+                    <button ng-click="layer.Evaluate()">Evaluate</button>
+                </div>
+                <div class="Controls" ng-if="ActiveLayer != $index">
+                    <button ng-click="Activate($index);">Activate This Layer</button>
+                </div>
+                
+                <div class="Activations" style="{{CSSSize(layer)}}">
+                    <div class="Cell" ng-repeat="cell in layer.Cells track by $index" style="{{CSSPosition(cell)}}">
+                        <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
                     </div>
                 </div>
             </div>
@@ -365,14 +368,25 @@
             App = angular.module("App", []);
             App.controller("Controller", ["$scope", function($scope)
             {
-
+                
                 $scope.Size = 8;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(30, 30);
-                $scope.Grid.Lateral(10);
-                $scope.Grid.Observe($scope.LGN, [-3, -3], [13, 13], 6);
+                $scope.Layers = [];
+                $scope.ActiveLayer = false;
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.ShowWeights = false;
+                
+                var layer1, layer2;
+                layer1 = NL.Grid(30, 30);
+                layer1.Lateral(10);
+                layer1.Observe($scope.LGN, [-3, -3], [13, 13], 6);
+                $scope.Layers.push(layer1);
+                
+                layer2 = NL.Grid(10, 10);
+                layer2.Lateral(5);
+                layer2.Observe(layer1, [-2, -2], [32, 32], 6);
+                $scope.Layers.push(layer2);
+
                 $scope.States = [
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,-1,-1,0,0,0,1,1,1,1,1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -395,6 +409,15 @@
                     {
                         return "background:#f00; opacity:"+(inFade);
                     }
+                };
+                $scope.CSSSize = function(inLayer)
+                {
+                    return "width:"+inLayer.Cell.length*$scope.Size+"px; height:"+inLayer.Cell[0].length*$scope.Size+"px;";
+                };
+                $scope.Activate = function(inLayer)
+                {
+                    console.log(inLayer);
+                    $scope.ActiveLayer = inLayer;
                 };
                 $scope.Toggle = function(inCell)
                 {
@@ -441,13 +464,14 @@
                     if(index > -1 && index < $scope.States.length)
                     {
                         $scope.Recall(index);
-                        $scope.Grid.Evaluate();
-                        $scope.Grid.Conform(0.01);
-                        $scope.Grid.Evaluate();
-                        /*
-                        $scope.Grid.StochEval();
-                        $scope.Grid.Evaluate();
-                        */
+                        console.log("Active Layer", $scope.ActiveLayer);
+                        var i;
+                        for(i=0; i<$scope.ActiveLayer; i++)
+                        {
+                            $scope.Layers[i].Evaluate();
+                        }
+                        $scope.Layers[$scope.ActiveLayer].Conform(0.01);
+                        $scope.Layers[$scope.ActiveLayer].Evaluate();
                     }
                 };
             }]);
