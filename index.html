@@ -4,6 +4,25 @@
         <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
         <script src="//treetopflyer.github.io/vcore/lib.js"></script>
         <script>
+        function shuffle(array)
+        {
+            var currentIndex = array.length, temporaryValue, randomIndex;
+
+            // While there remain elements to shuffle...
+            while (0 !== currentIndex) {
+
+                // Pick a remaining element...
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex -= 1;
+
+                // And swap it with the current element.
+                temporaryValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = temporaryValue;
+            }
+
+            return array;
+        }
         var NL = {};
         NL.Sigmoid = function(inAmount)
         {
@@ -141,7 +160,7 @@
                             rel = (inDistance/inRadius);
                         }
                         mapping = Math.abs((rel*3)-2)-1;
-                        mapping = Math.random()*0.2 - 0.1;
+                        //mapping = Math.random()*0.3 - 0.15;
                         cell.Field.push({
                             Cell:inCell,
                             Weight:mapping
@@ -159,7 +178,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, false, function(inCell, inDistance)
+                    obj.RadialSelect(cell.Pos[0], cell.Pos[1], inRadius, true, function(inCell, inDistance)
                     {
                         if(inDistance == 0)
                         {
@@ -204,7 +223,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    cell.Conform = NL.Sigmoid(cell.Conform)-0.5;
+                    cell.Conform = NL.Sigmoid(cell.Conform);
                 }
             };
 
@@ -217,16 +236,48 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    if(Math.random() < 0.4)
-                    {
-                        continue;
-                    }
                     for(j=0; j<cell.Field.length; j++)
                     {
                         sample = cell.Field[j].Cell.Charge;
                         diff = (sample - cell.Field[j].Weight)*inAmount*cell.Conform;
                         cell.Field[j].Weight += diff;
                     }
+                }
+            };
+            /**************************************/
+
+            obj.StochEval = function()
+            {
+                var rand = shuffle(obj.Cells);
+                var i, j;
+                for(i=0; i<rand.length; i++)
+                {
+                    cell = rand[i];
+                    cell.Charge = 0;
+                    for(j=0; j<cell.Field.length; j++)
+                    {
+                        cell.Charge += (cell.Field[j].Cell.Charge * cell.Field[j].Weight);
+                    }
+                    cell.Charge = NL.Sigmoid(cell.Charge)*2 - 1;
+
+                    for(j=0; j<cell.Neighbors.length; j++)
+                    {
+                        var neighbor = cell.Neighbors[j];
+                        obj.StochConf(neighbor.Cell, cell.Charge*neighbor.Weight*0.001);
+                    }
+                }
+            };
+            obj.StochConf = function(inCell, inAmount)
+            {
+                var j;
+                var sample;
+                var diff;
+                for(j=0; j<inCell.Field.length; j++)
+                {
+
+                    sample = inCell.Field[j];
+                    diff = (sample.Cell.Charge - sample.Weight)*inAmount;
+                    sample.Weight += diff;
                 }
             };
 
@@ -272,7 +323,7 @@
             <!-- LGN/input image -->
             <div style="position:relative; left:420px; top:40px;">
                 <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
-                    <div class="Fill" style="opacity:{{Sigmoid(cell.Charge)}}"></div>
+                    <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
                 </div>
             </div>
 
@@ -304,11 +355,12 @@
             App = angular.module("App", []);
             App.controller("Controller", ["$scope", function($scope)
             {
+
                 $scope.Size = 8;
                 $scope.LGN = NL.Grid(10, 10);
-                $scope.Grid = NL.Grid(20, 20);
-                $scope.Grid.Lateral(8);
-                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
+                $scope.Grid = NL.Grid(25, 25);
+                $scope.Grid.Lateral(5);
+                $scope.Grid.Observe($scope.LGN, [0, 0], [9, 9], 8);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.ShowWeights = false;
                 $scope.States = [
@@ -379,8 +431,13 @@
                     if(index > -1 && index < $scope.States.length)
                     {
                         $scope.Recall(index);
+                        $scope.Grid.Evaluate();
                         $scope.Grid.Conform(0.01);
                         $scope.Grid.Evaluate();
+                        /*
+                        $scope.Grid.StochEval();
+                        $scope.Grid.Evaluate();
+                        */
                     }
                 };
             }]);
