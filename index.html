@@ -324,6 +324,7 @@
     </head>
     <body>
         <div ng-app="App" ng-controller="Controller" ng-cloak ng-keypress="HandlerKeys($event)">
+
             <button ng-click="ShowWeights = !ShowWeights">ShowWeights</button>
 
             <!-- active layer weights -->
@@ -338,12 +339,12 @@
             <!-- lgn/input -->
             <div class="Layer">
                 <div class="Controls">
-                    <button ng-repeat="state in States track by $index" ng-click="Recall($index);">Recall</button> 
+                    <button ng-repeat="state in Images.Data track by $index" ng-click="Recall($index);">Recall</button> 
                     |
                     <button ng-click="Capture(LGN);">Capture</button>
                 </div>
                 <div class="Activations" style="{{CSSSize(LGN)}}">
-                    <div class="Cell" ng-click="Toggle(cell);" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
+                    <div class="Cell" ng-repeat="cell in LGN.Cells track by $index" style="{{CSSPosition(cell)}}">
                         <div class="Fill" style="{{CSSColor(cell.Charge)}}"></div>
                     </div>
                 </div>
@@ -373,26 +374,37 @@
         <script>
             var App;
             App = angular.module("App", ["ngCanvas"]);
-            App.controller("Controller", ["$scope", "CutUp", function($scope, CutUp)
+            App.controller("Controller", ["$scope", "CutUp", "Bytes", function($scope, CutUp, Bytes)
             {
-                
+                $scope.Images = {
+                    URL:"training.png",
+                    Data:[],
+                    Size:[100, 100]
+                };
+                CutUp($scope.Images.URL, $scope.Images.Size, [0, 0], function(inSlices)
+                {
+                    $scope.Images.Data = inSlices;
+                    $scope.$apply();
+                    console.log($scope.Images.Data[0]);
+                });
+
                 $scope.Size = 8;
                 $scope.Layers = [];
                 $scope.ActiveLayer = 0;
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.ShowWeights = false;
                 
-                $scope.LGN = NL.Grid(10, 10);
+                $scope.LGN = NL.Grid(100, 100);
 
                 var layer1, layer2;
-                layer1 = NL.Grid(30, 30);
-                layer1.Lateral(6);
-                layer1.Observe($scope.LGN, [-3, -3], [13, 13], 6);
+                layer1 = NL.Grid(50, 50);
+                layer1.Lateral(8);
+                layer1.Observe($scope.LGN, [-3, -3], [110, 110], 10);
                 $scope.Layers.push(layer1);
                 
                 layer2 = NL.Grid(10, 10);
                 layer2.Lateral(5);
-                layer2.Observe(layer1, [-2, -2], [32, 32], 10);
+                layer2.Observe(layer1, [-2, -2], [32, 32], 5);
                 $scope.Layers.push(layer2);
 
                 $scope.States = [
@@ -458,7 +470,7 @@
                     var state;
                     var i;
                     
-                    state = $scope.States[inIndex];
+                    state = $scope.Images.Data[inIndex];
 
                     for(i=0; i<$scope.LGN.Cells.length; i++)
                     {
@@ -469,7 +481,7 @@
                 {
                     var index;
                     index = inEvent.charCode - 49;
-                    if(index > -1 && index < $scope.States.length)
+                    if(index > -1 && index < $scope.Images.Data.length)
                     {
                         $scope.Recall(index);
                         console.log("Active Layer", $scope.ActiveLayer);
@@ -482,12 +494,6 @@
                         $scope.Layers[$scope.ActiveLayer].Evaluate();
                     }
                 };
-
-                CutUp("training.png", [100, 100], [0, 0], function(inSlices)
-                {
-                    $scope.Data = inSlices;
-                    $scope.$apply();
-                });
 
             }]);
         </script>
