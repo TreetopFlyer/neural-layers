@@ -182,14 +182,7 @@
                 for(i=0; i<obj.Cells.length; i++)
                 {
                     cell = obj.Cells[i];
-                    if(cell.Conform < -1)
-                    {
-                        cell.Conform = -1;
-                    }
-                    if(cell.Conform > 1)
-                    {
-                        cell.Conform = 1;
-                    }
+                    cell.Conform = NL.Sigmoid(cell.Conform);
                 }
             };
 
@@ -276,7 +269,7 @@
                 $scope.LGN = NL.Grid(10, 10);
                 $scope.Grid = NL.Grid(20, 20);
                 $scope.Grid.Lateral(10);
-                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 4);
+                $scope.Grid.Observe($scope.LGN, [3, 3], [7, 7], 2);
                 $scope.Sigmoid = NL.Sigmoid;
                 $scope.States = [
                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,-1,-1,-1,-1,0,0,0,0,0,0,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
